@@ -34,10 +34,10 @@ void messageDrive(const vugc1_control::drive_values &pwm) {
   // 2. write the center value and pause
   // 3. execute desired negative velocity
   if (pwm.pwm_drive < PWM_CENTER && previous.pwm_drive >= PWM_CENTER) {
-    analogWrite(MOTOR_PIN, PWM_CENTER - 150);
-    delay(30);
+    analogWrite(MOTOR_PIN, PWM_CENTER - 200);
+    delay(50);
     analogWrite(MOTOR_PIN, PWM_CENTER);
-    delay(30);
+    delay(50);
   }
 
   vugc1_control::drive_values safe;
