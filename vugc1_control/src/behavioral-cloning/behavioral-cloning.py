@@ -1,13 +1,25 @@
 #!/usr/bin/env python
 
-import rospy
-import numpy as np
-import cv2
-from std_msgs.msg import Image
+from cv_bridge import CvBridge, CvBridgeError
 from keras.models import load_model
+from sensor_msgs.msg import Image
 from vugc1_control.msg import drive_param
+import argparse
+import cv2
+import numpy as np
+import rospy
 
-model = load_model('model.h5')
+
+# arguments
+parser = argparse.ArgumentParser(description='[behavioral cloning] choose model')
+parser.add_argument('--model', type=str, help='model')
+args = parser.parse_args()
+
+# model
+model = load_model(args.model)
+model._make_predict_function()
+
+bridge = CvBridge()
 control_drive_parameters = rospy.Publisher('vugc1_control_drive_parameters', drive_param, queue_size=10)
 
 
@@ -21,19 +33,21 @@ def offhook():
 
 def callback(message):
     print("[#callback]: received message")
-    data = np.array(map(ord, message.data), dtype=np.uint8)
-    image = data.reshape(message.height, message.width, 3)
 
-    # BGR -> RGB
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    image = image[188:, 0:672, 0:3]
-    image = cv2.resize(image, (320, 160))
-    
-    angle = float(model.predict(image, batch_size=1))
-    message = drive_param()
-    message.velocity = 27
-    message.angle = angle
-    control_drive_parameters.publish(message)
+    try:
+        image = bridge.imgmsg_to_cv2(message)
+        image = image[188:, 0:672, 0:3]
+        image = cv2.resize(image, (320, 160))
+
+        angle = float(model.predict(image[None, :, :, :], batch_size=1))
+        print('[#callback]: angle={}'.format(angle))
+
+        message = drive_param()
+        message.velocity = 17
+        message.angle = angle
+        control_drive_parameters.publish(message)
+    except CvBridgeError as e:
+        print(e)
 
     
 def main():

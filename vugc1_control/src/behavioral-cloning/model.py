@@ -1,13 +1,14 @@
+from cv_bridge import CvBridge, CvBridgeError
+from keras.layers import Conv2D, Cropping2D, Dense, Dropout, Flatten, Lambda, MaxPooling2D
+from keras.models import Sequential
+from sklearn.model_selection import train_test_split
+from sklearn.utils import shuffle
+import argparse
 import csv
 import cv2
+import gc
 import numpy as np
-from sklearn.utils import shuffle
-from sklearn.model_selection import train_test_split
-from keras.models import Sequential
-from keras.layers import Conv2D, Cropping2D, Dense, Dropout, Flatten, Lambda, MaxPooling2D
 import rosbag
-import argparse
-from cv_bridge import CvBridge, CvBridgeError
 
 
 def get_data(path):
@@ -15,7 +16,7 @@ def get_data(path):
     bag = rosbag.Bag(path)
     topics = [
         '/zed/rgb/image_rect_color',
-        '/vugc1_control_drive_parameters'
+        '/control_drive_parameters' # /vugc1_control_drive_parameters
     ]
 
     angle = 0.0
@@ -38,12 +39,12 @@ def get_data(path):
                 image = cv2.resize(image, (320, 160))
 
                 # convert to grayscale
-                weights = [1, 0, 0] # BGR (standard luminescence: [0.114, 0.587, 0.299])
-                weights = np.array([weights]).reshape((1,3))
-                image = cv2.transform(image, weights)
+                # weights = [1, 0, 0] # BGR (standard luminescence: [0.114, 0.587, 0.299])
+                # weights = np.array([weights]).reshape((1,3))
+                # image = cv2.transform(image, weights)
 
-                cv2.imshow('image', image)
-                cv2.waitKey(0)
+                # cv2.imshow('image', image)
+                # cv2.waitKey(0)
 
                 print('[{}] message=({}, {}), shape=({})'.format(count, message.height, message.width, image.shape))
 
@@ -52,10 +53,13 @@ def get_data(path):
             except CvBridgeError as e:
                 print(e)
 
-        elif topic == '/vugc1_control_drive_parameters':
+        elif topic == '/control_drive_parameters': # /vugc1_control_drive_parameters
+            print('angle={}'.format(angle))
             angle = message.angle
 
     bag.close()
+    del bag
+    print('[#get_data]: cleaning up bag: {}'.format(gc.collect()))
 
     return np.array(images), np.array(labels)
 
@@ -91,18 +95,25 @@ def get_model(activation_type='elu', dropout=0.3):
 
 def main():
     parser = argparse.ArgumentParser(description='[behavioral cloning model] choose bag')
-    parser.add_argument("path", type=str, help="path to bag")
+    parser.add_argument('--bag', type=str, help='path to bag')
     args = parser.parse_args()
+    bag_path = args.bag
 
     model = get_model()
-    data, labels = get_data(args.path)
+    data, labels = get_data(bag_path)
 
     print('[#main]: training the model')
     model.compile(optimizer='adam', loss='mse')
-    model.fit(data, labels, batch_size=128, epochs=7, validation_split=.2)
+    model.fit(data, labels, batch_size=64, epochs=7, validation_split=.2)
 
-    print('[#main]: saving to model.h5')
-    model.save('model.h5')
+    tokens = bag_path.split('/')
+    bag_name = tokens[len(tokens) - 1]
+    print('[#main]: saving to {}.h5'.format(bag_name))
+    model.save('{}.h5'.format(bag_name))
+
+    del model, data, labels
+    collected = gc.collect()
+    print('[#main]: cleaning up: {}'.format(collected))
 
 
 if __name__ == '__main__':
