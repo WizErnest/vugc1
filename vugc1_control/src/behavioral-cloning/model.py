@@ -11,7 +11,15 @@ import numpy as np
 import rosbag
 
 
-def get_data(path):
+def get_data(path, np_format=False):
+    images = []
+    labels = []
+    
+    if np_format: # np.savez format, with data labeled as 'images', 'labels', respectively
+        dat = np.load(path)
+        print('[#get_data]: found files: ', dat.files)
+        return dat['images'], dat['labels']
+    
     bridge = CvBridge()
     bag = rosbag.Bag(path)
     topics = [
@@ -21,9 +29,6 @@ def get_data(path):
 
     angle = 0.0
     count = 0
-
-    images = []
-    labels = []
 
     for topic, message, timestamp in bag.read_messages(topics=topics):
         print('{}: [{}]: {}'.format(timestamp, topic, ''))
@@ -96,11 +101,16 @@ def get_model(activation_type='elu', dropout=0.3):
 def main():
     parser = argparse.ArgumentParser(description='[behavioral cloning model] choose bag')
     parser.add_argument('--bag', type=str, help='path to bag')
+    parser.add_argument('--numpy_data', type=str, help='path to numpy saved array')
     args = parser.parse_args()
-    bag_path = args.bag
-
+    if args.numpy_data:
+        data_path = args.numpy_data
+        data, labels = get_data(data_path, np_format=True) 
+    else: 
+        data_path = args.bag
+        data, labels = get_data(data_path)
     model = get_model()
-    data, labels = get_data(bag_path)
+    
 
     print('[#main]: training the model')
     model.compile(optimizer='adam', loss='mse')
