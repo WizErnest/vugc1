@@ -7,7 +7,7 @@
     </node>
 
     <param name="robot_description" command="$(find xacro)/xacro '$(find vugc1_description)/urdf/racecar.xacro'" />
-    <node name="robot_state_publisher" pkg="robot_state_publisher" type="state_publisher" />
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
 
     <include file="$(find zed_wrapper)/launch/zed.launch" />
     <include file="$(find razor_imu_9dof)/launch/razor-pub.launch" />

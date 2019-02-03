@@ -34,16 +34,6 @@ void callback(const sensor_msgs::Imu::ConstPtr& msg) {
   vx += ax * dt;
   vy += ay * dt;
 
-  ROS_INFO("dt = %f", dt);
-  ROS_INFO("x = %f", x);
-  ROS_INFO("y = %f", y);
-  ROS_INFO("th = %f", th);
-  ROS_INFO("ax = %f", ax);
-  ROS_INFO("ay = %f", ay);
-  ROS_INFO("vx = %f", vx);
-  ROS_INFO("vy = %f", vy);
-  ROS_INFO("vth = %f", vth);
-
   geometry_msgs::Quaternion odom_quat = tf::createQuaternionMsgFromYaw(th);
 
   // tf
@@ -84,11 +74,12 @@ void callback(const sensor_msgs::Imu::ConstPtr& msg) {
 int main(int argc, char **argv) {
   ros::init(argc, argv, "vugc1_odometry_publisher");
   ros::NodeHandle n;
+  ROS_INFO("[vugc1_odometry_publisher]: init");
 
   current_time = ros::Time::now();
   last_time = ros::Time::now();
 
-  ros::Subscriber imu_subscriber = n.subscribe("imu", 1000, callback);
+  ros::Subscriber imu_subscriber = n.subscribe("imu", 1000, &callback);
   odometry_publisher = n.advertise<nav_msgs::Odometry>("odom", 50);
 
   ros::spin();
