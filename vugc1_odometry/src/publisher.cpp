@@ -13,20 +13,13 @@ double vy = 0.0;
 ros::Time current_time, last_time;
 ros::Publisher odometry_publisher;
 
-double reduce_noise(double value, double threshold) {
-  if (std::abs(value) < threshold) {
-    return 0.0;
-  } else {
-    return value;
-  }
-}
-
 void callback(const sensor_msgs::Imu::ConstPtr& msg) {  
-  current_time = ros::Time::now();
+  current_time = msg->header.stamp;
+
   double dt = (current_time - last_time).toSec();
-  double ax = reduce_noise(msg->linear_acceleration.x, 0.9);
-  double ay = reduce_noise(msg->linear_acceleration.y, 0.9);
-  double vth = reduce_noise(msg->angular_velocity.z, 0.02);
+  double ax = msg->linear_acceleration.x;
+  double ay = msg->linear_acceleration.y;
+  double vth = msg->angular_velocity.z;
 
   x += 0.5 * (ax * dt * dt) + (vx * dt);
   y += 0.5 * (ay * dt * dt) + (vy * dt);
@@ -47,8 +40,9 @@ void callback(const sensor_msgs::Imu::ConstPtr& msg) {
   odom_trans.transform.translation.z = 0.0;
   odom_trans.transform.rotation = odom_quat;
 
-  tf::TransformBroadcaster odometry_broadcaster;
+  static tf::TransformBroadcaster odometry_broadcaster;
   odometry_broadcaster.sendTransform(odom_trans);
+  ROS_INFO("[vugc1_odometry_publisher]: sendTransform");
 
   nav_msgs::Odometry odom;
   odom.header.stamp = current_time;
@@ -67,6 +61,7 @@ void callback(const sensor_msgs::Imu::ConstPtr& msg) {
   odom.twist.twist.angular.z = vth;
 
   odometry_publisher.publish(odom);
+  ROS_INFO("[vugc1_odometry_publisher]: published to /odom");
 
   last_time = ros::Time::now();
 }
@@ -79,8 +74,14 @@ int main(int argc, char **argv) {
   current_time = ros::Time::now();
   last_time = ros::Time::now();
 
-  ros::Subscriber imu_subscriber = n.subscribe("imu", 1000, &callback);
-  odometry_publisher = n.advertise<nav_msgs::Odometry>("odom", 50);
+  ros::Subscriber imu_subscriber = n.subscribe("imu", 1, &callback);
+  odometry_publisher = n.advertise<nav_msgs::Odometry>("odom", 1);
+
+  // ros::Rate r(1);
+  // while(ros::ok()) {
+  //   ros::spinOnce();
+  //   r.sleep();
+  // }
 
   ros::spin();
 

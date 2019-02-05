@@ -1,4 +1,4 @@
-#!/usr/bin/env python  
+#!/usr/bin/env python
 
 import rospy
 import math
@@ -10,12 +10,11 @@ if __name__ == '__main__':
     print('[tf_listener] initialized')
     listener = tf.TransformListener()
 
-    rate = rospy.Rate(10.0)
+    rate = rospy.Rate(10)
     while not rospy.is_shutdown():
         try:
             (trans,rot) = listener.lookupTransform('/base_link', '/odom', rospy.Time(0))
             print(trans, rot)
-        except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
-            continue
-
+        except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException) as e:
+            print('[tf_listener]: exception={}'.format(e))
         rate.sleep()
