@@ -7,8 +7,7 @@ import argparse
 import csv
 import cv2
 import gc
-import numpy as np
-import rosbag
+import numpy as np import rosbag
 
 
 def get_data(path, np_format=False):
@@ -116,7 +115,7 @@ def main():
     model.compile(optimizer='adam', loss='mse')
     model.fit(data, labels, batch_size=64, epochs=7, validation_split=.2)
 
-    tokens = args.bag.split('/')
+    tokens = (args.bag or args.numpy_data).split('/')
     bag_name = tokens[-1]
     print('[#main]: saving to {}.h5'.format(bag_name))
     model.save('{}.h5'.format(bag_name))
