@@ -116,8 +116,8 @@ def main():
     model.compile(optimizer='adam', loss='mse')
     model.fit(data, labels, batch_size=64, epochs=7, validation_split=.2)
 
-    tokens = bag_path.split('/')
-    bag_name = tokens[len(tokens) - 1]
+    tokens = args.bag.split('/')
+    bag_name = tokens[-1]
     print('[#main]: saving to {}.h5'.format(bag_name))
     model.save('{}.h5'.format(bag_name))
 
