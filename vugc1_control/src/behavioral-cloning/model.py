@@ -18,7 +18,7 @@ def get_data(path, np_format=False):
     if np_format: # np.savez format, with data labeled as 'images', 'labels', respectively
         dat = np.load(path)
         print('[#get_data]: found files: ', dat.files)
-        return dat['images'], dat['labels']
+        return dat['arr_0'], dat['arr_1'] #images, labels
     
     bridge = CvBridge()
     bag = rosbag.Bag(path)
