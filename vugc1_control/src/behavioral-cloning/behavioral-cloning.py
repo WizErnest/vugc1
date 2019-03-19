@@ -8,7 +8,11 @@ import argparse
 import cv2
 import numpy as np
 import rospy
-
+import tensorflow as tf
+from keras.backend.tensorflow_backend import set_session
+config = tf.ConfigProto()
+config.gpu_options.per_process_gpu_memory_fraction = 0.3
+set_session(tf.Session(config=config))
 
 # arguments
 parser = argparse.ArgumentParser(description='[behavioral cloning] choose model')
@@ -43,13 +47,13 @@ def callback(message):
         print('[#callback]: angle={}'.format(angle))
 
         message = drive_param()
-        message.velocity = 17
+        message.velocity = 16
         message.angle = angle
         control_drive_parameters.publish(message)
     except CvBridgeError as e:
         print(e)
 
-    
+
 def main():
     rospy.on_shutdown(offhook)
     rospy.init_node('vugc1_control_behavioral_cloning', anonymous=True)

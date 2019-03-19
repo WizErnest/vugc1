@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
 import rospy
-from control.msg import drive_values
-from control.msg import drive_param
+from vugc1_control.msg import drive_values
+from vugc1_control.msg import drive_param
 from std_msgs.msg import Bool
 
 control_serial_drive_parameters = rospy.Publisher('vugc1_control_serial_drive_parameters', drive_values, queue_size=10)

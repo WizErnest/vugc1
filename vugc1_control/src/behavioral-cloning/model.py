@@ -7,23 +7,24 @@ import argparse
 import csv
 import cv2
 import gc
-import numpy as np import rosbag
+import numpy as np
+import rosbag
 
 
 def get_data(path, np_format=False):
     images = []
     labels = []
-    
+
     if np_format: # np.savez format, with data labeled as 'images', 'labels', respectively
         dat = np.load(path)
         print('[#get_data]: found files: ', dat.files)
-        return dat['arr_0'], dat['arr_1'] #images, labels
-    
+        return dat['images'], dat['labels'] #images, labels
+
     bridge = CvBridge()
     bag = rosbag.Bag(path)
     topics = [
         '/zed/rgb/image_rect_color',
-        '/control_drive_parameters' # /vugc1_control_drive_parameters
+        '/vugc1_control_drive_parameters'
     ]
 
     angle = 0.0
@@ -42,7 +43,13 @@ def get_data(path, np_format=False):
                 image = image[188:, 0:672, 0:3]
                 image = cv2.resize(image, (320, 160))
 
-                # convert to grayscale
+		# filter blue values
+		hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+		lower_red = np.array([110,50,50])
+    		upper_red = np.array([130,255,255])
+                mask = cv2.inRange(hsv, lower_red, upper_red)
+		image = cv2.bitwise_and(image,image, mask= mask)
+		# convert to grayscale
                 # weights = [1, 0, 0] # BGR (standard luminescence: [0.114, 0.587, 0.299])
                 # weights = np.array([weights]).reshape((1,3))
                 # image = cv2.transform(image, weights)
@@ -57,7 +64,7 @@ def get_data(path, np_format=False):
             except CvBridgeError as e:
                 print(e)
 
-        elif topic == '/control_drive_parameters': # /vugc1_control_drive_parameters
+        elif topic == '/vugc1_control_drive_parameters': # /vugc1_control_drive_parameters
             print('angle={}'.format(angle))
             angle = message.angle
 
@@ -69,6 +76,7 @@ def get_data(path, np_format=False):
 
 
 def get_model(activation_type='elu', dropout=0.3):
+    '''
     model = Sequential()
     model.add(Cropping2D(cropping=((60, 25), (0, 0)), input_shape=(160, 320, 3)))
     model.add(Lambda(lambda x: (x / 255) - .5))
@@ -93,9 +101,15 @@ def get_model(activation_type='elu', dropout=0.3):
     model.add(Dense(50, activation=activation_type))
     model.add(Dense(10, activation=activation_type))
     model.add(Dense(1))
-
+    '''
+    model = Sequential()
+    model.add(Conv2D(36, (5, 5), strides=(2, 2), activation=activation_type, input_shape=(160, 320, 3)))
+    model.add(Conv2D(64, (3, 3), activation=activation_type))
+    model.add(Flatten())
+    model.add(Dense(15, activation=activation_type))
+    model.add(Dense(10, activation=activation_type))
+    model.add(Dense(1))
     return model
-  
 
 def main():
     parser = argparse.ArgumentParser(description='[behavioral cloning model] choose bag')
@@ -104,16 +118,16 @@ def main():
     args = parser.parse_args()
     if args.numpy_data:
         data_path = args.numpy_data
-        data, labels = get_data(data_path, np_format=True) 
-    else: 
+        data, labels = get_data(data_path, np_format=True)
+    else:
         data_path = args.bag
         data, labels = get_data(data_path)
     model = get_model()
-    
+
 
     print('[#main]: training the model')
     model.compile(optimizer='adam', loss='mse')
-    model.fit(data, labels, batch_size=64, epochs=7, validation_split=.2)
+    model.fit(data, labels, batch_size=16, epochs=14, validation_split=.2)
 
     tokens = (args.bag or args.numpy_data).split('/')
     bag_name = tokens[-1]
