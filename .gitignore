@@ -2,3 +2,5 @@
 zed-ros-wrapper
 rf2o_laser_odometry/
 
+# large models
+vugc1_control/src/behavioral-cloning/models/2019-02-20-18-50-08.bag.active.h5
