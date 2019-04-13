@@ -8,7 +8,7 @@ import math
 
 control_drive_parameters = rospy.Publisher('vugc1_control_drive_parameters', drive_param, queue_size=10)
 
-angle_max = 60 
+angle_max = 70
 velocity_max = 20
 
 
@@ -24,8 +24,10 @@ def callback(msg):
     velocity = range_map(msg.drive.speed, -0.5, 0.5, -20, 20)
 
     print('[vugc1_ackermann_drive_to_drive_param]: msg.drive.speed={}, msg.drive.steering_angle={}'.format(msg.drive.speed, msg.drive.steering_angle))
-    angle = range_map(math.degrees(steering_angle), -1*angle_max, angle_max, -1*angle_max, angle_max)
-    
+    angle = range_map(steering_angle, -math.pi / 2.0, math.pi / 2.0, -1*angle_max, angle_max)
+    # angle = range_map(math.degrees(steering_angle), -40, 40, -100, 100)
+    angle *= -1
+
     print('[vugc1_ackermann_drive_to_drive_param]: velocity={}, angle={}'.format(velocity, angle))
 
     parameters = drive_param()
