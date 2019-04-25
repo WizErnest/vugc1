@@ -7,7 +7,7 @@ from numpy import interp
 
 
 max_velocity_x = 0.5
-max_velocity_theta = 0.25
+max_velocity_theta = 2.0
 velocity_x = 0
 velocity_theta = 0
 
@@ -27,7 +27,7 @@ def callback(data):
     global max_velocity_theta
     global velocity_x
     global velocity_theta
-    
+
     trigger_left = data.axes[2]
     trigger_right = data.axes[5]
     x = data.buttons[2]

@@ -56,14 +56,17 @@ add_message_files(
   drive_param.msg
   drive_values.msg
   pid_input.msg
+  steering_params.msg
+  steering_values.msg
 )
 
 ## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
+add_service_files(
+  FILES
+  VisualEncoder.srv
 #   Service1.srv
 #   Service2.srv
-# )
+)
 
 ## Generate actions in the 'action' folder
 # add_action_files(
