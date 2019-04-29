@@ -7,9 +7,20 @@ from visualization_msgs.msg import Marker, MarkerArray
 from time import sleep
 from vugc1_perception.srv import Detection
 from vugc1_perception.msg import *
+import cv2 as cv
+from cv_bridge import CvBridge, CvBridgeError
 
-visualization_markers_publisher = rospy.Publisher('visualization_marker_array', MarkerArray, queue_size=1)
+
 available = True
+bridge = CvBridge()
+visualization_markers_publisher = rospy.Publisher('visualization_marker_array', MarkerArray, queue_size=1)
+
+cx = 692.67
+cy = 345.187
+fx = 698.359
+fy = 698.359
+k1 = -0.0975497
+k2 = 3.49484e-06
 
 
 def delete_markers():
@@ -20,15 +31,13 @@ def delete_markers():
     visualization_markers_publisher.publish(markerArray)
 
 
-def get_bounding_boxes(rgb):
+def get_bounding_boxes(color, depth):
     rospy.wait_for_service('vugc1_perception_detection')
     try:
         detection = rospy.ServiceProxy('vugc1_perception_detection', Detection)
-        # xmins, xmaxs, ymins, ymaxs = detection(rgb)
-        # return xmins, xmaxs, ymins, ymaxs
-        result = detection(rgb)
-        print('received: {}'.format(result))
-        return result
+        result = detection(color, depth)
+        # print('received: {}'.format(result))
+        return result.boxes
     except rospy.ServiceException, e:
         print('service call failed: {}'.format(e))
         return None, None, None, None
@@ -64,22 +73,26 @@ def callback(rgb, depth):
 
     print('[#callback]: rgb={}'.format(rgb.header.stamp))
     print('[#callback]: depth={}'.format(depth.header.stamp))
-
-    print('calling service...!!!')
-    result = get_bounding_boxes(rgb)
-    # xmins, xmaxs, ymins, ymaxs = get_bounding_boxes(rgb)
-    # print('xmins = {}'.format(xmins))
-    # print('ymins = {}'.format(ymins))
-    # print('xmaxs = {}'.format(xmaxs))
-    # print('ymaxs = {}'.format(ymaxs))
+    print('[#callback]: calling service...')
+    boxes = get_bounding_boxes(rgb, depth)
 
     # delete all boxes first TODO: track with uids and update
     delete_markers()
 
-    # show the detected pedestrians
     markerArray = MarkerArray()
-    for i in range(5): # for (x, y, id) in computed:
-        pedestrian_marker = get_pedestrian_marker(i, i, i)
+    # show the detected pedestrians
+    for i, box in enumerate(list(boxes.boxes)):
+        print('x=({}, {}) y=({}, {}) depth={}'.format(box.xmin, box.xmax, box.ymin, box.ymax, box.depth))
+        # centers of bounding box in pixel coordinates
+        x_center = 720 * ((box.xmin + box.xmax) / 2.0)
+        y_center = 1280 * ((box.ymin + box.ymax) / 2.0)
+        depth = box.depth
+
+        X = (1 / fx) * (x_center - cx)
+        Y = (1 / fy) * (y_center - cy)
+        true_y = depth ** 2 - X ** 2
+
+        pedestrian_marker = get_pedestrian_marker(i, true_y, -X)
         markerArray.markers.append(pedestrian_marker)
 
     visualization_markers_publisher.publish(markerArray)
@@ -95,6 +108,7 @@ def main():
     ts = message_filters.TimeSynchronizer([rgb, depth], 1)
     ts.registerCallback(callback)
     rospy.spin()
+
 
 if __name__ == '__main__':
     main()
